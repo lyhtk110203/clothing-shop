@@ -1,0 +1,17 @@
+package com.shop.clothing_shop.repository;
+
+import com.shop.clothing_shop.entity.ProductVariant;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.Optional;
+
+public interface ProductVariantRepository extends JpaRepository<ProductVariant, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select v from ProductVariant v where v.id = :id")
+    Optional<ProductVariant> findByIdForUpdate(@Param("id") Long id);
+}
+
