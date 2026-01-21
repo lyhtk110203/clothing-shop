@@ -1,0 +1,25 @@
+@startuml
+' Sequence: Order Tracking by trackingToken (no login)
+' Based strictly on OrderController.getByTrackingToken and OrderService.getByTrackingToken
+
+actor Customer
+participant "OrderController" as OrderController
+participant "OrderService" as OrderService
+participant "OrderRepository" as OrderRepo
+participant "OrderMapper" as OrderMapper
+
+Customer -> OrderController : GET /api/orders/{trackingToken}
+OrderController -> OrderService : getByTrackingToken(trackingToken)
+activate OrderService
+OrderService -> OrderRepo : findByTrackingToken(trackingToken)
+alt not found
+  OrderService --> OrderController : throw BusinessException("Order not found")
+  deactivate OrderService
+  return
+else found
+  OrderService -> OrderMapper : toResponse(order)
+  OrderService --> OrderController : OrderResponse
+  deactivate OrderService
+end
+OrderController --> Customer : 200 OK (OrderResponse)
+@enduml

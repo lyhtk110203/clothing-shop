@@ -1,0 +1,23 @@
+@startuml
+' Sequence: SePay IPN via SepayController.handleIpn
+' Based strictly on SepayController code
+
+actor SePay
+participant "SepayController" as SepayController
+participant "OrderRepository" as OrderRepo
+
+SePay -> SepayController : POST /sepay/ipn (SepayIpnRequest)
+SepayController -> SepayController : log.info("SePay IPN raw: {}", req)
+SepayController -> SepayController : orderCode = req.order.orderId
+SepayController -> OrderRepo : findByOrderCode(orderCode)
+alt order == null
+  SepayController -> SepayController : log.warn("IPN test / unknown order: {}", orderCode)
+  SepayController --> SePay : 200 OK
+else
+  alt req.transaction.transactionStatus == "APPROVED"
+    SepayController -> SepayController : order.setStatus(PAID)
+    SepayController -> OrderRepo : save(order)
+  end
+  SepayController --> SePay : 200 OK
+end
+@enduml

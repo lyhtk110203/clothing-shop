@@ -4,9 +4,11 @@ import com.shop.clothing_shop.entity.OrderItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+@Repository
 public interface OrderItemRepository
         extends JpaRepository<OrderItem, Long> {
 
@@ -19,4 +21,3 @@ public interface OrderItemRepository
     """)
     int getSoldQuantity(@Param("variantId") Long variantId);
 }
-

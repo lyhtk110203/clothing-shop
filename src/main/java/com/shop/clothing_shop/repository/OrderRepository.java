@@ -17,6 +17,8 @@ public interface OrderRepository
 
     Optional<Order> findByTrackingToken(UUID trackingToken);
 
+    Optional<Order> findByOrderCode(String orderCode);
+
     List<Order> findByStatus(OrderStatus status);
 
     List<Order> findByCreatedAtBetween(

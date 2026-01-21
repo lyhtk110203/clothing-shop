@@ -10,8 +10,8 @@ import java.util.UUID;
 
 @Getter
 @Setter
-@AllArgsConstructor
 @Builder
+@AllArgsConstructor
 public class OrderResponse {
 
     private Long id;
@@ -29,3 +29,4 @@ public class OrderResponse {
 
     private List<OrderItemResponse> items;
 }
+

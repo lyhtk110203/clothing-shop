@@ -3,8 +3,7 @@ package com.shop.clothing_shop.entity;
 import com.shop.clothing_shop.enums.PaymentMethod;
 import com.shop.clothing_shop.enums.PaymentStatus;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
 
@@ -12,6 +11,9 @@ import java.math.BigDecimal;
 @Table(name = "payment")
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Payment {
 
     @Id
@@ -25,6 +27,5 @@ public class Payment {
     private PaymentStatus status;
 
     @OneToOne
-    @JoinColumn(name = "order_id")
     private Order order;
 }

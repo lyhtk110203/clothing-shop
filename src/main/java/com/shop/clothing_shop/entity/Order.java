@@ -11,57 +11,53 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
+@Table(name = "orders")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "orders")
 public class Order {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "order_code", unique = true, nullable = false)
+    @Column(unique = true, nullable = false)
     private String orderCode;
 
-    @Column(name = "tracking_token", unique = true, nullable = false)
+    @Column(unique = true, nullable = false)
     private UUID trackingToken;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "payment_method", nullable = false)
     private PaymentMethod paymentMethod;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private OrderStatus status;
 
-    @Column(name = "customer_name", nullable = false)
     private String customerName;
-
     private String phone;
-
-    @Column(columnDefinition = "TEXT")
     private String address;
 
-    @Column(name = "total_amount", nullable = false)
+    @Column(nullable = false)
+    private String email;
+
+    @Column(nullable = false)
     private BigDecimal totalAmount;
 
     private LocalDateTime createdAt;
 
-    @OneToMany(
-            mappedBy = "order",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     private List<OrderItem> orderItems;
 
     @PrePersist
-    void onCreate() {
-        this.orderCode = "ORD-" + System.currentTimeMillis();
-        this.trackingToken = UUID.randomUUID();
-        this.status = OrderStatus.CREATED;
-        this.createdAt = LocalDateTime.now();
+    void prePersist() {
+        if (orderCode == null)
+            orderCode = "ORD-" + System.currentTimeMillis();
+        if (trackingToken == null)
+            trackingToken = UUID.randomUUID();
+        if (status == null)
+            status = OrderStatus.CREATED;
+        createdAt = LocalDateTime.now();
     }
 }

@@ -1,0 +1,192 @@
+@startuml
+' ERD generated strictly from JPA annotations in the codebase
+' Copy-paste this into PlantUML to render
+
+hide circle
+skinparam linetype ortho
+skinparam ArrowColor #2c3e50
+skinparam ClassBorderColor #2c3e50
+skinparam ClassBackgroundColor #ecf0f1
+skinparam ClassFontColor #2c3e50
+
+' Category: Danh mục sản phẩm, liên kết 1..* Product
+entity "Category" as Category {
+  + id : Long <<PK>>
+  --
+  name : String
+  slug : String <<unique, not null>>
+}
+
+'
+' Product: Sản phẩm, chứa mô tả/trạng thái, liên kết Category, có nhiều Variant & Image
+entity "Product" as Product {
+  + id : Long <<PK>>
+  --
+  name : String
+  description : Text
+  status : ProductStatus <<enum>>
+  slug : String <<unique>>
+  thumbnailUrl : String
+  createdAt : LocalDateTime
+  --
+  category_id : Long <<FK>>
+}
+
+' ProductImage: Ảnh cấp product (không phải variant), có cờ thumbnail/position
+entity "ProductImage" as ProductImage {
+  + id : Long <<PK>>
+  --
+  imageUrl : String
+  isThumbnail : boolean
+  position : Integer
+  --
+  product_id : Long <<FK>>
+}
+
+' ProductVariant: Biến thể (SKU), có stockQuantity, @Version, thuộc Product, M..N AttributeValue
+entity "ProductVariant" as ProductVariant {
+  + id : Long <<PK>>
+  --
+  sku : String <<unique, not null>>
+  price : BigDecimal
+  stockQuantity : Integer
+  status : VariantStatus <<enum>>
+  createdAt : LocalDateTime
+  version : Long <<@Version, not null>>
+  --
+  product_id : Long <<FK>>
+}
+
+' VariantImage: Ảnh cấp variant
+entity "VariantImage" as VariantImage {
+  + id : Long <<PK>>
+  --
+  imageUrl : String
+  sortOrder : Integer
+  --
+  variant_id : Long <<FK>>
+}
+
+' Attribute: Thuộc tính (ví dụ size/color) để gán cho variant qua M..N
+entity "Attribute" as Attribute {
+  + id : Long <<PK>>
+  --
+  name : String
+}
+
+' AttributeValue: Giá trị thuộc tính, unique(attribute_id, value), liên kết M..N với ProductVariant
+entity "AttributeValue" as AttributeValue {
+  + id : Long <<PK>>
+  --
+  value : String
+  --
+  attribute_id : Long <<FK>>
+  ' UniqueConstraint(attribute_id, value)
+}
+
+' Cart: Giỏ hàng theo cartToken (UUID), có nhiều CartItem
+entity "Cart" as Cart {
+  + id : Long <<PK>>
+  --
+  cartToken : UUID <<unique, not null>>
+  expiredAt : LocalDateTime
+}
+
+' CartItem: Mỗi dòng trong giỏ hàng, tham chiếu Variant, quantity
+entity "CartItem" as CartItem {
+  + id : Long <<PK>>
+  --
+  quantity : Integer
+  --
+  cart_id : Long <<FK>>
+  variant_id : Long <<FK>>
+}
+
+' Order: Đơn hàng, có trackingToken để tra cứu, trạng thái OrderStatus, tổng tiền
+entity "Order" as _Order {
+  + id : Long <<PK>>
+  --
+  orderCode : String <<unique, not null>>
+  trackingToken : UUID <<unique, not null>>
+  paymentMethod : PaymentMethod <<enum, not null>>
+  status : OrderStatus <<enum, not null>>
+  customerName : String <<not null>>
+  phone : String
+  address : Text
+  totalAmount : BigDecimal <<not null>>
+  createdAt : LocalDateTime
+}
+
+' OrderItem: Dòng sản phẩm thuộc Order, tham chiếu Variant, lưu price, quantity
+entity "OrderItem" as OrderItem {
+  + id : Long <<PK>>
+  --
+  quantity : Integer
+  price : BigDecimal
+  --
+  order_id : Long <<FK, not null>>
+  variant_id : Long <<FK, not null>>
+}
+
+' Payment: Bản ghi thanh toán (COD/SEPAY), 1-1 với Order, có status
+entity "Payment" as Payment {
+  + id : Long <<PK>>
+  --
+  method : PaymentMethod <<enum>>
+  status : PaymentStatus <<enum>>
+  --
+  order_id : Long <<FK>>
+}
+
+' PaymentTransaction: Log giao dịch cổng thanh toán, lưu rawPayload, idempotency dựa trên transactionCode (repo)
+entity "PaymentTransaction" as PaymentTransaction {
+  + id : Long <<PK>>
+  --
+  gateway : String
+  transactionCode : String
+  status : String
+  rawPayload : Text <<LOB>>
+  createdAt : LocalDateTime
+  --
+  payment_id : Long <<FK>>
+}
+
+' StockReservation: Đặt chỗ tồn theo cartToken & variant, dùng khi checkout để chống oversell
+entity "StockReservation" as StockReservation {
+  + id : Long <<PK>>
+  --
+  quantity : Integer
+  expiredAt : LocalDateTime
+  status : ReservationStatus <<enum>>
+  cartToken : UUID
+  --
+  variant_id : Long <<FK>>
+}
+
+' Relationships
+Category ||--o{ Product : "1..*"
+Product ||--o{ ProductVariant : "1..*"
+Product ||--o{ ProductImage : "1..*"
+ProductVariant ||--o{ VariantImage : "1..*"
+
+Attribute ||--o{ AttributeValue : "1..*"
+
+' Many-to-Many between ProductVariant and AttributeValue (no explicit join entity)
+ProductVariant }o--o{ AttributeValue : "M..N"
+
+Cart ||--o{ CartItem : "1..*"
+CartItem }o--|| ProductVariant : "*..1"
+
+_Order ||--o{ OrderItem : "1..*"
+OrderItem }o--|| ProductVariant : "*..1"
+
+' One-to-One Order-Payment
+_Order ||--|| Payment : "1..1"
+
+' Payment to Transactions
+Payment ||--o{ PaymentTransaction : "1..*"
+
+' Stock reservation per variant
+ProductVariant ||--o{ StockReservation : "1..*"
+
+@enduml

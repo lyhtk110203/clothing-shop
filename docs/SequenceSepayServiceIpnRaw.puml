@@ -1,0 +1,48 @@
+@startuml
+' Sequence: SePay IPN handling via SepayService.handleIpnRaw(Map<String,Object>)
+' Based strictly on SepayService code
+
+actor SePay
+participant "SepayService" as SepayService
+participant "OrderRepository" as OrderRepo
+participant "PaymentRepository" as PaymentRepo
+participant "PaymentTransactionRepository" as TxRepo
+
+SePay -> SepayService : IPN payload (Map)
+activate SepayService
+SepayService -> SepayService : orderCode = payload["orderCode"]
+SepayService -> SepayService : status = payload["status"]
+SepayService -> SepayService : transactionCode = payload["transactionCode"]
+
+SepayService -> OrderRepo : findByOrderCode(orderCode)
+alt not found
+  SepayService --> SePay : throw BusinessException("Order not found")
+  deactivate SepayService
+  return
+end
+
+SepayService -> PaymentRepo : findByOrder_Id(order.id)
+alt not found
+  SepayService --> SePay : throw BusinessException("Payment not found")
+  deactivate SepayService
+  return
+end
+
+SepayService -> TxRepo : existsByTransactionCode(transactionCode)
+alt already exists
+  SepayService --> SePay : return (idempotent)
+  deactivate SepayService
+  return
+end
+
+SepayService -> TxRepo : save(PaymentTransaction(gateway="SEPAY", transactionCode, status, rawPayload))
+
+alt status == "SUCCESS" or status == "PAID"
+  SepayService -> PaymentRepo : payment.setStatus(SUCCESS); save(payment)
+  SepayService -> OrderRepo : order.setStatus(PAID); save(order)
+end
+
+SepayService --> SePay : return
+
+deactivate SepayService
+@enduml

@@ -1,0 +1,74 @@
+@startuml
+' Sequence: Checkout flow through Controller -> Service -> Repository
+' Based solely on code in CheckoutController and CheckoutService
+
+actor User
+participant "CheckoutController" as CheckoutController
+participant "CheckoutService" as CheckoutService
+participant "CartRepository" as CartRepo
+participant "CartItemRepository" as CartItemRepo
+participant "StockReservationService" as StockResvSvc
+participant "OrderRepository" as OrderRepo
+participant "OrderItemRepository" as OrderItemRepo
+participant "ProductVariantRepository" as VariantRepo
+participant "PaymentRepository" as PaymentRepo
+participant "PaymentTransactionRepository" as PayTxRepo
+
+User -> CheckoutController : POST /api/checkout/{cartToken} (CheckoutRequest)
+CheckoutController -> CheckoutService : checkout(cartToken, request)
+
+activate CheckoutService
+CheckoutService -> CartRepo : findByCartToken(cartToken)
+alt cart not found
+  CheckoutService --> CheckoutController : throw BusinessException("Cart not found")
+  deactivate CheckoutService
+  return
+end
+
+CheckoutService -> CheckoutService : if cart.items empty -> throw BusinessException("Cart empty")
+
+loop for each CartItem
+  CheckoutService -> StockResvSvc : reserve(cartToken, variantId, quantity)
+end
+
+CheckoutService -> OrderRepo : save(Order CREATED)
+
+CheckoutService -> CheckoutService : total = 0
+loop for each CartItem
+  CheckoutService -> OrderItemRepo : save(OrderItem)
+  CheckoutService -> CheckoutService : total += variant.price * qty
+end
+
+CheckoutService -> CheckoutService : order.totalAmount = total
+CheckoutService -> OrderRepo : save(order)
+
+CheckoutService -> PaymentRepo : save(Payment)
+
+alt request.paymentMethod != COD
+  CheckoutService -> PayTxRepo : save(PaymentTransaction PENDING)
+end
+
+' Commit stock under transaction
+loop for each CartItem
+  CheckoutService -> VariantRepo : findByIdForUpdate(variantId)
+  alt variant not found
+    CheckoutService --> CheckoutController : throw BusinessException("Variant not found")
+    deactivate CheckoutService
+    return
+  end
+  CheckoutService -> StockResvSvc : getReservedQuantity(variantId)
+  CheckoutService -> CheckoutService : check available >= qty else throw BusinessException
+  CheckoutService -> VariantRepo : save(variant with decreased stock)
+end
+
+' Release reservation and clear cart
+loop for each CartItem
+  CheckoutService -> StockResvSvc : releaseByVariant(variantId)
+end
+CheckoutService -> CheckoutService : cart.items.clear()
+CheckoutService -> CartRepo : save(cart)
+
+CheckoutService --> CheckoutController : return order
+
+deactivate CheckoutService
+@enduml

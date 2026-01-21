@@ -7,7 +7,11 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "payment_transaction")
-@Getter @Setter
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class PaymentTransaction {
 
     @Id
@@ -15,9 +19,7 @@ public class PaymentTransaction {
     private Long id;
 
     private String gateway;
-
     private String transactionCode;
-
     private String status;
 
     @Lob
@@ -26,6 +28,5 @@ public class PaymentTransaction {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @ManyToOne
-    @JoinColumn(name = "payment_id")
     private Payment payment;
 }

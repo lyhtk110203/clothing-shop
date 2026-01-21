@@ -9,10 +9,11 @@ import java.util.UUID;
 @Getter
 @Setter
 public class CheckoutRequest {
-//    private UUID cartToken;
     private String customerName;
     private String phone;
+    private String email;
     private String address;
     private PaymentMethod paymentMethod;
 }
+
 

@@ -6,8 +6,8 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-@AllArgsConstructor
 @Builder
+@AllArgsConstructor
 public class OrderItemResponse {
 
     private Long variantId;
@@ -16,3 +16,4 @@ public class OrderItemResponse {
     private Integer quantity;
     private BigDecimal subtotal;
 }
+
